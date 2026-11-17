@@ -6,6 +6,8 @@ from fastapi import Depends
 from app.services.auth_service import get_current_user
 from app.services.permissions import require_roles
 from app.routers.trips import router as trips_router
+from app.routers.members import router as members_router
+from app.routers.itinerary import router as itinerary_router
 
 app = FastAPI(
     title="Airbnb AI Trip War Room",
@@ -14,6 +16,8 @@ app = FastAPI(
 )
 app.include_router(auth_router)
 app.include_router(trips_router)
+app.include_router(members_router)
+app.include_router(itinerary_router)
 
 
 @app.get("/")
