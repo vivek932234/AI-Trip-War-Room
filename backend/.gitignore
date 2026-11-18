@@ -3,3 +3,5 @@ venv/
 __pycache__/
 *.pyc
 *.zip
+test_websocket.py
+test_outsider.py

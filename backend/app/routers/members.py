@@ -6,6 +6,10 @@ from app.schemas.member import AddMember
 from app.services.auth_service import get_current_user
 from app.services.permissions import require_roles
 
+
+from bson import ObjectId
+from bson.errors import InvalidId
+
 router = APIRouter(prefix="/trips", tags=["Trip Members"])
 
 trips_collection = db["trips"]
@@ -20,8 +24,6 @@ def add_member(
         require_roles("planner", "leader", "admin")
     )
 ):
-    from bson import ObjectId
-    from bson.errors import InvalidId
 
     try:
         object_id = ObjectId(trip_id)
