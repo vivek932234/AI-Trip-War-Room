@@ -9,6 +9,7 @@ from app.routers.trips import router as trips_router
 from app.routers.members import router as members_router
 from app.routers.itinerary import router as itinerary_router
 from app.routers.websocket import router as websocket_router
+from app.routers.ai_concierge import router as ai_concierge_router
 
 app = FastAPI(
     title="Airbnb AI Trip War Room",
@@ -20,6 +21,7 @@ app.include_router(trips_router)
 app.include_router(members_router)
 app.include_router(itinerary_router)
 app.include_router(websocket_router)
+app.include_router(ai_concierge_router)
 
 
 @app.get("/")
