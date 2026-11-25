@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -9,6 +8,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from app.database import db
 
+from datetime import datetime, timezone, date, timedelta
+
 
 router = APIRouter(
     prefix="/ai",
@@ -16,6 +17,43 @@ router = APIRouter(
 )
 trips_collection = db["trips"]
 members_collection = db["trip_members"]
+itineraries_collection = db["ai_itineraries"]
+ai_chat_collection = db["ai_chat_messages"]
+
+def check_trip_access(trip_id: str, current_user: dict):
+    try:
+        trip_object_id = ObjectId(trip_id)
+    except InvalidId:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid trip ID"
+        )
+
+    trip = trips_collection.find_one({
+        "_id": trip_object_id
+    })
+
+    if not trip:
+        raise HTTPException(
+            status_code=404,
+            detail="Trip not found"
+        )
+
+    is_creator = trip.get("created_by") == current_user["id"]
+
+    membership = members_collection.find_one({
+        "trip_id": trip_id,
+        "user_id": current_user["id"]
+    })
+
+    if not is_creator and not membership:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this trip"
+        )
+
+    return trip
+
 
 
 class TravelRequest(BaseModel):
@@ -24,6 +62,9 @@ class TravelRequest(BaseModel):
     budget: float = Field(gt=0)
     travelers: int = Field(gt=0, le=50)
     preferences: str = Field(default="General sightseeing", max_length=500)
+
+class AIChatRequest(BaseModel):
+    message: str = Field(min_length=2, max_length=2000)
 
 
 @router.post("/travel-plan")
@@ -75,28 +116,8 @@ def generate_trip_travel_plan(
     trip_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    # Validate trip ID
-    try:
-        trip_object_id = ObjectId(trip_id)
-    except InvalidId:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid trip ID"
-        )
-
-    # Fetch trip from MongoDB
-    trip = trips_collection.find_one({
-        "_id": trip_object_id
-    })
-
-    if not trip:
-        raise HTTPException(
-            status_code=404,
-            detail="Trip not found"
-        )
-
-    # Check whether user created or joined this trip
-    is_creator = trip.get("created_by") == current_user["id"]
+    # Validate trip access
+    trip = check_trip_access(trip_id, current_user)
 
     # Build prompt using actual MongoDB trip details
     prompt = f"""
@@ -218,13 +239,43 @@ def generate_trip_travel_plan(
         ai_response["remaining_budget"] = remaining_budget
         ai_response["over_budget"] = remaining_budget < 0
 
-        return {
-            "message": "Trip-based travel plan generated successfully",
+        # Get the latest itinerary version for this trip
+        latest_itinerary = itineraries_collection.find_one(
+            {"trip_id": trip_id},
+            sort=[("version", -1)]
+        )
+
+        version = (
+            latest_itinerary["version"] + 1
+            if latest_itinerary
+            else 1
+        )
+
+        # Save the new itinerary in MongoDB
+        itinerary_document = {
             "trip_id": trip_id,
             "trip_title": trip.get("title"),
             "destination": trip.get("destination"),
-            "travel_plan": ai_response
+            "version": version,
+            "travel_plan": ai_response,
+            "generated_by": current_user["id"],
+            "created_at": datetime.now(timezone.utc)
         }
+
+        save_result = itineraries_collection.insert_one(
+            itinerary_document
+        )
+
+
+        return {
+    "message": "Trip-based travel plan generated and saved successfully",
+    "trip_id": trip_id,
+    "trip_title": trip.get("title"),
+    "destination": trip.get("destination"),
+    "itinerary_id": str(save_result.inserted_id),
+    "version": version,
+    "travel_plan": ai_response
+}
 
     except Exception as e:
         print("AI Travel Plan Error:", str(e))
@@ -232,3 +283,218 @@ def generate_trip_travel_plan(
             status_code=503,
             detail="AI Travel Concierge is temporarily unavailable"
         )
+
+
+@router.get("/trips/{trip_id}/itineraries")
+def get_trip_itineraries(
+    trip_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    # Verify trip access
+    check_trip_access(trip_id, current_user)
+
+    # Fetch all saved itinerary versions
+    itineraries = list(
+        itineraries_collection.find(
+            {"trip_id": trip_id}
+        ).sort("version", -1)
+    )
+
+    # Convert MongoDB documents into API responses
+    result = []
+
+    for itinerary in itineraries:
+        result.append({
+            "itinerary_id": str(itinerary["_id"]),
+            "trip_id": itinerary["trip_id"],
+            "version": itinerary["version"],
+            "destination": itinerary["destination"],
+            "generated_by": itinerary["generated_by"],
+            "created_at": itinerary["created_at"].isoformat(),
+            "travel_plan": itinerary["travel_plan"]
+        })
+
+    return {
+        "message": "Itinerary history retrieved successfully",
+        "total_versions": len(result),
+        "itineraries": result
+    }
+
+@router.get("/trips/{trip_id}/itineraries/{version}")
+def get_specific_itinerary(
+    trip_id: str,
+    version: int,
+    current_user: dict = Depends(get_current_user)
+):
+    # Verify trip access
+    check_trip_access(trip_id, current_user)
+
+    # Validate version
+    if version < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Version must be greater than zero"
+        )
+
+    # Find the requested itinerary version
+    itinerary = itineraries_collection.find_one({
+        "trip_id": trip_id,
+        "version": version
+    })
+
+    if not itinerary:
+        raise HTTPException(
+            status_code=404,
+            detail="Itinerary version not found"
+        )
+
+    return {
+        "message": "Itinerary retrieved successfully",
+        "itinerary_id": str(itinerary["_id"]),
+        "trip_id": trip_id,
+        "version": itinerary["version"],
+        "destination": itinerary["destination"],
+        "generated_by": itinerary["generated_by"],
+        "created_at": itinerary["created_at"].isoformat(),
+        "travel_plan": itinerary["travel_plan"]
+    }
+
+
+@router.post("/trips/{trip_id}/chat")
+def chat_with_ai(
+    trip_id: str,
+    request: AIChatRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    # Step 1: Verify trip access
+    trip = check_trip_access(trip_id, current_user)
+
+    # Step 2: Fetch the latest 10 conversation messages
+    previous_messages = list(
+        ai_chat_collection.find({
+            "trip_id": trip_id,
+            "user_id": current_user["id"]
+        }).sort("created_at", -1).limit(10)
+    )
+
+    previous_messages.reverse()
+
+    # Step 3: Prepare conversation history
+    conversation_history = ""
+
+    for item in previous_messages:
+        conversation_history += (
+            f'{item["role"]}: {item["message"]}\n'
+        )
+
+    # Step 4: Build the Gemini prompt
+    prompt = f"""
+    You are an AI Travel Concierge for a collaborative travel platform.
+
+    Help the user with practical travel-related questions.
+
+    Actual trip details:
+    Trip title: {trip.get("title")}
+    Destination: {trip.get("destination")}
+    Start date: {trip.get("start_date")}
+    End date: {trip.get("end_date")}
+    Total budget: INR {trip.get("budget")}
+    Description: {trip.get("description", "No description")}
+
+    Previous conversation:
+    {conversation_history}
+
+    Current user question:
+    {request.message}
+
+    Instructions:
+    - Answer according to the actual trip details.
+    - Give practical and budget-conscious suggestions.
+    - Use INR when discussing costs.
+    - Clearly identify estimated prices.
+    - Do not claim to have verified live prices or availability.
+    - If information is unavailable, say so.
+    - Keep your response clear and helpful.
+    """
+
+    # Step 5: Generate the AI response
+    try:
+        ai_response = generate_ai_response(prompt)
+
+        if not isinstance(ai_response, str) or not ai_response.strip():
+            raise ValueError("Empty AI response")
+
+    except Exception as e:
+        print("AI Chat Error:", str(e))
+        raise HTTPException(
+            status_code=503,
+            detail="AI Travel Concierge is temporarily unavailable."
+        )
+
+    # Step 6: Save both messages in MongoDB
+    now = datetime.now(timezone.utc)
+
+    ai_chat_collection.insert_many([
+        {
+            "trip_id": trip_id,
+            "user_id": current_user["id"],
+            "role": "user",
+            "message": request.message,
+            "created_at": now
+        },
+        {
+            "trip_id": trip_id,
+            "user_id": current_user["id"],
+            "role": "assistant",
+            "message": ai_response,
+            "created_at": now
+        }
+    ])
+
+    # Step 7: Return the response
+    return {
+        "message": "AI response generated successfully",
+        "trip_id": trip_id,
+        "question": request.message,
+        "answer": ai_response
+    }
+
+
+@router.get("/trips/{trip_id}/chat/history")
+def get_ai_chat_history(
+    trip_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    # Verify that the user has access to this trip
+    check_trip_access(trip_id, current_user)
+
+    # Retrieve this user's previous AI chat messages
+    messages = list(
+        ai_chat_collection.find(
+            {
+                "trip_id": trip_id,
+                "user_id": current_user["id"]
+            }
+        ).sort([
+            ("created_at", 1),
+            ("_id", 1)
+        ])
+    )
+
+    # Convert MongoDB documents into API response format
+    chat_history = []
+
+    for msg in messages:
+        chat_history.append({
+            "id": str(msg["_id"]),
+            "role": msg["role"],
+            "message": msg["message"],
+            "created_at": msg["created_at"]
+        })
+
+    return {
+        "message": "AI chat history retrieved successfully",
+        "trip_id": trip_id,
+        "total_messages": len(chat_history),
+        "history": chat_history
+    }

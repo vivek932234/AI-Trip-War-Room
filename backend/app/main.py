@@ -8,18 +8,42 @@ from app.services.permissions import require_roles
 from app.routers.trips import router as trips_router
 from app.routers.members import router as members_router
 from app.routers.itinerary import router as itinerary_router
+from app.routers.expenses import router as expenses_router
 from app.routers.websocket import router as websocket_router
 from app.routers.ai_concierge import router as ai_concierge_router
+from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+frontend_url = os.getenv("FRONTEND_URL", "").rstrip("/")
+
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
+
+if frontend_url:
+    allowed_origins.append(frontend_url)
 
 app = FastAPI(
     title="Airbnb AI Trip War Room",
     description="Collaborative AI-powered trip planning platform",
     version="1.0.0"
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(auth_router)
 app.include_router(trips_router)
 app.include_router(members_router)
 app.include_router(itinerary_router)
+app.include_router(expenses_router)
 app.include_router(websocket_router)
 app.include_router(ai_concierge_router)
 

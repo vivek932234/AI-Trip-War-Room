@@ -1,7 +1,22 @@
+
+# Environment variables and secrets
 .env
+.env.*
+!.env.example
+
+# Python
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+
+# Node.js
+node_modules/
+dist/
+
+# ZIP files
 *.zip
+
+# Local test files
 test_websocket.py
 test_outsider.py

@@ -5,9 +5,9 @@ from bson import ObjectId
 from bson.errors import InvalidId
 
 from app.database import db
-from app.schemas.itinerary import ItineraryCreate,ItineraryUpdate
+from app.schemas.itinerary import ItineraryCreate, ItineraryUpdate
 from app.services.auth_service import get_current_user
-from app.services.permissions import require_roles
+
 
 router = APIRouter(prefix="/trips", tags=["Itinerary"])
 
@@ -16,16 +16,24 @@ members_collection = db["trip_members"]
 itinerary_collection = db["itineraries"]
 
 
+# Check whether the user has access to the trip
 def check_trip_access(trip_id: str, current_user: dict):
+
     try:
         object_id = ObjectId(trip_id)
     except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid trip ID")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid trip ID"
+        )
 
     trip = trips_collection.find_one({"_id": object_id})
 
     if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Trip not found"
+        )
 
     is_creator = trip["created_by"] == current_user["id"]
 
@@ -43,15 +51,43 @@ def check_trip_access(trip_id: str, current_user: dict):
     return trip
 
 
+# Check whether the user can modify the itinerary
+def check_trip_edit_access(trip_id: str, current_user: dict):
+
+    trip = check_trip_access(trip_id, current_user)
+
+    # Trip creator can edit
+    if trip["created_by"] == current_user["id"]:
+        return trip
+
+    # Global admin can edit
+    if current_user.get("role") == "admin":
+        return trip
+
+    # Check the user's role in this particular trip
+    member = members_collection.find_one({
+        "trip_id": trip_id,
+        "user_id": current_user["id"]
+    })
+
+    if not member or member.get("role") not in ["planner", "leader"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only trip planners can modify the itinerary"
+        )
+
+    return trip
+
+
+# ADD ITINERARY ACTIVITY
 @router.post("/{trip_id}/itinerary")
 def add_itinerary(
     trip_id: str,
     activity: ItineraryCreate,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
+    current_user: dict = Depends(get_current_user)
 ):
-    trip = check_trip_access(trip_id, current_user)
+
+    trip = check_trip_edit_access(trip_id, current_user)
 
     trip_start_date = datetime.strptime(
         trip["start_date"], "%Y-%m-%d"
@@ -99,15 +135,20 @@ def add_itinerary(
         "activity_id": str(result.inserted_id)
     }
 
+
+# GET ITINERARY ACTIVITIES
 @router.get("/{trip_id}/itinerary")
 def get_itinerary(
     trip_id: str,
     current_user: dict = Depends(get_current_user)
 ):
+
     check_trip_access(trip_id, current_user)
 
     activities = list(
-        itinerary_collection.find({"trip_id": trip_id}).sort(
+        itinerary_collection.find(
+            {"trip_id": trip_id}
+        ).sort(
             [("activity_date", 1), ("start_time", 1)]
         )
     )
@@ -122,16 +163,16 @@ def get_itinerary(
     }
 
 
+# UPDATE ITINERARY ACTIVITY
 @router.patch("/{trip_id}/itinerary/{activity_id}")
 def update_itinerary(
     trip_id: str,
     activity_id: str,
     activity: ItineraryUpdate,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
+    current_user: dict = Depends(get_current_user)
 ):
-    trip = check_trip_access(trip_id, current_user)
+
+    trip = check_trip_edit_access(trip_id, current_user)
 
     try:
         activity_object_id = ObjectId(activity_id)
@@ -155,6 +196,7 @@ def update_itinerary(
     update_data = activity.model_dump(exclude_unset=True)
 
     if "activity_date" in update_data:
+
         new_date = update_data["activity_date"]
 
         trip_start = datetime.strptime(
@@ -174,6 +216,7 @@ def update_itinerary(
         update_data["activity_date"] = new_date.isoformat()
 
     for field in ["start_time", "end_time"]:
+
         if field in update_data:
             update_data[field] = (
                 update_data[field].isoformat()
@@ -182,7 +225,10 @@ def update_itinerary(
 
     if update_data:
         itinerary_collection.update_one(
-            {"_id": activity_object_id},
+            {
+                "_id": activity_object_id,
+                "trip_id": trip_id
+            },
             {"$set": update_data}
         )
 
@@ -191,15 +237,15 @@ def update_itinerary(
     }
 
 
+# DELETE ITINERARY ACTIVITY
 @router.delete("/{trip_id}/itinerary/{activity_id}")
 def delete_itinerary(
     trip_id: str,
     activity_id: str,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
+    current_user: dict = Depends(get_current_user)
 ):
-    check_trip_access(trip_id, current_user)
+
+    check_trip_edit_access(trip_id, current_user)
 
     try:
         activity_object_id = ObjectId(activity_id)

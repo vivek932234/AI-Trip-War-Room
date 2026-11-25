@@ -1,8 +1,9 @@
-
 from fastapi import (
     APIRouter,
     WebSocket,
-    WebSocketDisconnect
+    WebSocketDisconnect,
+    Depends,
+    HTTPException
 )
 from typing import Dict, List
 from jose import jwt, JWTError
@@ -12,12 +13,16 @@ from bson.errors import InvalidId
 from app.database import db
 from app.services.security import settings
 
+from datetime import datetime, timezone
+from app.services.auth_service import get_current_user
+
 
 router = APIRouter(tags=["Real-Time Collaboration"])
 
 trips_collection = db["trips"]
 members_collection = db["trip_members"]
 users_collection = db["users"]
+chat_messages_collection = db["chat_messages"]
 
 
 class ConnectionManager:
@@ -110,22 +115,58 @@ async def trip_websocket(websocket: WebSocket, trip_id: str):
     token = websocket.query_params.get("token")
 
     if not token:
-        await websocket.close(code=1008, reason="Authentication required")
+        await websocket.close(
+            code=1008,
+            reason="Authentication required"
+        )
         return
 
     current_user = authenticate_websocket(token)
 
     if not current_user:
-        await websocket.close(code=1008, reason="Invalid token")
+        await websocket.close(
+            code=1008,
+            reason="Invalid token"
+        )
         return
 
     if not has_trip_access(trip_id, current_user):
-        await websocket.close(code=1008, reason="Trip access denied")
+        await websocket.close(
+            code=1008,
+            reason="Trip access denied"
+        )
         return
 
     await manager.connect(trip_id, websocket)
 
     try:
+        # LOAD PREVIOUS CHAT MESSAGES
+        previous_messages = list(
+            chat_messages_collection.find(
+                {"trip_id": trip_id}
+            )
+            .sort("created_at", 1)
+            .limit(100)
+        )
+
+        history = []
+
+        for msg in previous_messages:
+            history.append({
+                "id": str(msg["_id"]),
+                "user": msg["user"],
+                "user_id": msg["user_id"],
+                "message": msg["message"],
+                "created_at": msg["created_at"].isoformat()
+            })
+
+        # SEND HISTORY ONLY TO THE CONNECTING USER
+        await websocket.send_json({
+            "event": "chat_history",
+            "messages": history
+        })
+
+        # NOTIFY OTHER CONNECTED MEMBERS
         await manager.broadcast(trip_id, {
             "event": "user_connected",
             "user": current_user["full_name"],
@@ -135,11 +176,45 @@ async def trip_websocket(websocket: WebSocket, trip_id: str):
         while True:
             data = await websocket.receive_json()
 
+            if not isinstance(data, dict):
+                continue
+
+            message_text = data.get("message", "")
+
+            if not isinstance(message_text, str):
+                continue
+
+            message_text = message_text.strip()
+
+            if not message_text or len(message_text) > 2000:
+                continue
+
+            # SAVE MESSAGE IN MONGODB
+            created_at = datetime.now(timezone.utc)
+
+            message_document = {
+                "trip_id": trip_id,
+                "user_id": current_user["id"],
+                "user": current_user["full_name"],
+                "message": message_text,
+                "created_at": created_at
+            }
+
+            result = chat_messages_collection.insert_one(
+                message_document
+            )
+
+            # BROADCAST MESSAGE TO ALL MEMBERS
             await manager.broadcast(trip_id, {
                 "event": "new_message",
+                "id": str(result.inserted_id),
                 "trip_id": trip_id,
                 "user": current_user["full_name"],
-                "data": data
+                "user_id": current_user["id"],
+                "data": {
+                    "message": message_text
+                },
+                "created_at": created_at.isoformat()
             })
 
     except WebSocketDisconnect:

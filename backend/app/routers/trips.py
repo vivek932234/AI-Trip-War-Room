@@ -89,7 +89,7 @@ def get_trip_by_id(
     trip_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    
+
 
     try:
         object_id = ObjectId(trip_id)
@@ -130,15 +130,13 @@ def get_trip_by_id(
         "trip": trip
     }
 
-@router.patch("/{trip_id}")
-def update_trip(
-    trip_id: str,
-    trip_data: TripUpdate,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
-):
 
+
+@router.get("/{trip_id}/my-role")
+def get_my_trip_role(
+    trip_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     try:
         object_id = ObjectId(trip_id)
     except InvalidId:
@@ -147,15 +145,74 @@ def update_trip(
             detail="Invalid trip ID"
         )
 
+    trip = trips_collection.find_one({
+        "_id": object_id
+    })
+
+    if not trip:
+        raise HTTPException(
+            status_code=404,
+            detail="Trip not found"
+        )
+
+    # Trip creator is treated as leader
+    if trip["created_by"] == current_user["id"]:
+        return {
+            "trip_id": trip_id,
+            "role": "leader",
+            "can_edit": True
+        }
+
+    # Find the user's membership
+    member = db["trip_members"].find_one({
+        "trip_id": trip_id,
+        "user_id": current_user["id"]
+    })
+
+    if not member:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this trip"
+        )
+
+    role = member.get("role", "viewer")
+
+    return {
+        "trip_id": trip_id,
+        "role": role,
+        "can_edit": role in ["planner", "leader"]
+    }
+
+@router.patch("/{trip_id}")
+def update_trip(
+    trip_id: str,
+    trip_data: TripUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        object_id = ObjectId(trip_id)
+    except InvalidId:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid trip ID"
+        )
+
+    # Find the trip
     existing_trip = trips_collection.find_one({
-        "_id": object_id,
-        "created_by": current_user["id"]
+        "_id": object_id
     })
 
     if not existing_trip:
         raise HTTPException(
             status_code=404,
             detail="Trip not found"
+        )
+
+    # Only the Trip Leader (creator) can update trip details
+    if existing_trip["created_by"] != current_user["id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the Trip Leader can update trip details"
         )
 
     update_data = trip_data.model_dump(exclude_unset=True)
@@ -166,12 +223,23 @@ def update_trip(
             detail="No fields provided for update"
         )
 
+    # Validate date changes
     start_date = update_data.get(
-        "start_date", existing_trip["start_date"]
+        "start_date",
+        existing_trip["start_date"]
     )
+
     end_date = update_data.get(
-        "end_date", existing_trip["end_date"]
+        "end_date",
+        existing_trip["end_date"]
     )
+
+    # Convert stored ISO strings to date objects
+    if isinstance(start_date, str):
+        start_date = datetime.fromisoformat(start_date).date()
+
+    if isinstance(end_date, str):
+        end_date = datetime.fromisoformat(end_date).date()
 
     if end_date < start_date:
         raise HTTPException(
@@ -179,9 +247,36 @@ def update_trip(
             detail="End date cannot be before start date"
         )
 
+    # Convert updated dates into ISO strings for MongoDB
+
+    # Validate existing itinerary activities against new trip dates
+    new_start_date = start_date.isoformat()
+    new_end_date = end_date.isoformat()
+
+    conflicting_activities = db["itineraries"].find_one({
+        "trip_id": trip_id,
+        "$or": [
+            {"activity_date": {"$lt": new_start_date}},
+            {"activity_date": {"$gt": new_end_date}}
+        ]
+    })
+
+    if conflicting_activities:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Trip dates cannot be changed because "
+                "existing itinerary activities fall "
+                "outside the new trip dates. "
+                "Please update those activities first."
+            )
+        )
+
+    # Convert updated dates into ISO strings for MongoDB
     for field in ["start_date", "end_date"]:
         if field in update_data:
             update_data[field] = update_data[field].isoformat()
+
 
     trips_collection.update_one(
         {"_id": object_id},
@@ -194,12 +289,11 @@ def update_trip(
         "updated_fields": list(update_data.keys())
     }
 
+
 @router.delete("/{trip_id}")
 def delete_trip(
     trip_id: str,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
+    current_user: dict = Depends(get_current_user)
 ):
     try:
         object_id = ObjectId(trip_id)
@@ -209,16 +303,27 @@ def delete_trip(
             detail="Invalid trip ID"
         )
 
-    result = trips_collection.delete_one({
-        "_id": object_id,
-        "created_by": current_user["id"]
+    # Check whether the trip exists
+    existing_trip = trips_collection.find_one({
+        "_id": object_id
     })
 
-    if result.deleted_count == 0:
+    if not existing_trip:
         raise HTTPException(
             status_code=404,
             detail="Trip not found"
         )
+
+    # Only the Trip Leader who created the trip can delete it
+    if existing_trip["created_by"] != current_user["id"]:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the Trip Leader can delete this trip"
+        )
+
+    trips_collection.delete_one({
+        "_id": object_id
+    })
 
     return {
         "message": "Trip deleted successfully",
