@@ -29,9 +29,7 @@ invites_collection = db["trip_invites"]
 def add_member(
     trip_id: str,
     member: AddMember,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
+    current_user: dict = Depends(get_current_user)
 ):
 
     try:

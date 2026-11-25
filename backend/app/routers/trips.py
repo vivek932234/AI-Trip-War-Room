@@ -14,13 +14,10 @@ router = APIRouter(prefix="/trips", tags=["Trips"])
 
 trips_collection = db["trips"]
 
-
 @router.post("/", status_code=201)
 def create_trip(
     trip: TripCreate,
-    current_user: dict = Depends(
-        require_roles("planner", "leader", "admin")
-    )
+    current_user: dict = Depends(get_current_user)
 ):
     if trip.end_date < trip.start_date:
         raise HTTPException(
