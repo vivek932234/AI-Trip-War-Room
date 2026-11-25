@@ -2,6 +2,7 @@
 import json
 import time
 
+import random
 from google import genai
 from google.genai import errors
 from app.services.security import settings
@@ -12,30 +13,56 @@ client = genai.Client(
 
 
 def generate_ai_response(prompt: str):
-    for attempt in range(3):
-        try:
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
-                contents=prompt
-            )
+    primary_model = settings.GEMINI_MODEL
 
-            return response.text
+    fallback_models = [
+        model.strip()
+        for model in settings.GEMINI_FALLBACK_MODELS.split(",")
+        if model.strip()
+    ]
 
-        except errors.ServerError as e:
-            if e.code == 503 and attempt < 2:
-                print(f"Gemini busy. Retrying ({attempt + 1}/3)...")
-                time.sleep(8 * (attempt + 1))
-                continue
+    models_to_try = list(dict.fromkeys(
+        [primary_model] + fallback_models
+    ))
 
-            raise Exception(
-                "Gemini is temporarily unavailable."
-            ) from e
+    for model in models_to_try:
+        print(f"Trying Gemini model: {model}")
 
-        except Exception as e:
-            print("Gemini API Error:", str(e))
-            raise Exception(
-                "AI service is temporarily unavailable."
-            ) from e
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt
+                )
+
+                if not response.text:
+                    raise ValueError("Gemini returned an empty response.")
+
+                print(f"SUCCESS: Generated response using {model}")
+                return response.text
+
+            except errors.ServerError as e:
+                print(f"Gemini Server Error ({model}): {e}")
+
+                if e.code == 503 and attempt == 0:
+                    wait_time = 5 + random.uniform(0, 2)
+                    print(f"Retrying {model} in {wait_time:.1f} seconds...")
+                    time.sleep(wait_time)
+                    continue
+
+                if e.code == 503:
+                    print(f"Switching from {model} to next model.")
+                    break
+
+                raise
+
+            except Exception as e:
+                print(f"Gemini API Error ({model}): {e}")
+                raise
+
+    raise Exception(
+        "All Gemini models are temporarily unavailable. Please try again later."
+    )
 
 
 def generate_structured_itinerary(prompt: str):
