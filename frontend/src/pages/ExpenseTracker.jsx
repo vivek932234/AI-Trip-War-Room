@@ -1,11 +1,12 @@
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import "./ExpenseTracker.css";
 
 function ExpenseTracker() {
     const { tripId } = useParams();
+    const navigate = useNavigate();
 
     const [expenses, setExpenses] = useState([]);
     const [members, setMembers] = useState([]);
@@ -13,6 +14,7 @@ function ExpenseTracker() {
     const [saving, setSaving] = useState(false);
     const [settlement, setSettlement] = useState(null);
     const [settlementLoading, setSettlementLoading] = useState(true);
+
 
     const [title, setTitle] = useState("");
     const [amount, setAmount] = useState("");
@@ -224,7 +226,12 @@ const handleMarkReceived = async (payment) => {
 
     return (
         <div className="expense-container">
-
+<button
+  onClick={() => navigate(`/trips/${tripId}`)}
+  className="back-to-trip-btn"
+>
+  ← Back to Trip
+</button>
             <h1>Group Expense Tracker</h1>
 
             <p>Manage and split your trip expenses with friends.</p>

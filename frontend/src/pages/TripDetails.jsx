@@ -384,6 +384,24 @@ const updateTripDetails = async (e) => {
   </button>
 </div>
 
+{/* Expense Split & Settlements */}
+<div className="trip-card">
+  <h2>💸 Expense Split & Settlements</h2>
+
+  <p>
+    Split hotel, food and travel expenses among trip members.
+    Track who paid, who owes money and payment settlements.
+  </p>
+
+  <button
+    onClick={() =>
+      navigate(`/trips/${tripId}/expenses`)
+    }
+  >
+    Manage Group Expenses
+  </button>
+</div>
+
 
 {/* GROUP TRIP CHAT */}
 <div className="trip-card">

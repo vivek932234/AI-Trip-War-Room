@@ -141,7 +141,7 @@ socket.onmessage = (event) => {
                 </div>
 
                 <button onClick={() => navigate(`/trips/${tripId}`)}>
-                    Back to Trip
+                     ← Back to Trip
                 </button>
             </header>
 

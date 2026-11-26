@@ -86,7 +86,7 @@ function BudgetTracker() {
       }}
     >
       <button onClick={() => navigate(`/trips/${tripId}`)}>
-        Back to Trip
+         ← Back to Trip
       </button>
 
       <h1>Shared Budget Tracker</h1>

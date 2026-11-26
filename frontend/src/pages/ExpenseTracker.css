@@ -1,50 +1,126 @@
 
+/* =====================================
+   EXPENSE TRACKER - AIRBNB INSPIRED UI
+===================================== */
+
 .expense-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 32px 24px;
-    color: #222;
+    padding: 35px 28px;
+    color: #222222;
     font-family: Arial, sans-serif;
 }
 
+/* BACK TO TRIP BUTTON */
+.back-to-trip-btn {
+    background: #ff385c;
+    color: #ffffff;
+    border: 1px solid #ff385c;
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 22px;
+    box-shadow: 0 4px 12px rgba(255, 56, 92, 0.18);
+    transition: background 0.2s ease;
+}
+
+.back-to-trip-btn:hover {
+    background: #e31c5f;
+    color: #ffffff;
+    border-color: #e31c5f;
+}
+
+/* PAGE HEADER */
+
 .expense-container h1 {
-    font-size: 32px;
-    margin-bottom: 8px;
-    color: #222;
+    font-size: 34px;
+    margin: 0 0 8px;
+    color: #222222;
+    font-weight: 700;
 }
 
 .expense-container > p {
     color: #717171;
-    margin-bottom: 28px;
+    font-size: 16px;
+    margin-bottom: 30px;
 }
+
+/* SUMMARY CARDS */
+
+.expense-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+    margin: 28px 0;
+}
+
+.expense-summary .summary-card {
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    border-radius: 16px;
+    padding: 25px;
+    min-width: 0;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.expense-summary .summary-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+}
+
+.summary-card span {
+    font-size: 23px;
+}
+
+.expense-summary .summary-card h2 {
+    font-size: 27px;
+    margin: 12px 0;
+    color: #222222;
+    overflow-wrap: anywhere;
+}
+
+.expense-summary .summary-card p {
+    color: #717171;
+    font-size: 15px;
+    margin: 0;
+}
+
+/* COMMON PANELS */
 
 .expense-form,
 .settlement-section,
 .expense-card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 14px;
-    padding: 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.035);
 }
+
+/* ADD EXPENSE FORM */
 
 .expense-form h2,
 .settlement-section h2 {
-    margin-top: 0;
-    margin-bottom: 22px;
+    font-size: 24px;
+    margin: 0 0 25px;
+    color: #222222;
 }
 
 .expense-form form {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.expense-form label {
-    display: block;
+.expense-form form > label {
+    font-size: 14px;
     font-weight: 600;
-    margin-bottom: 6px;
+    color: #333333;
+    margin-top: 5px;
 }
 
 .expense-form input:not([type="checkbox"]),
@@ -52,55 +128,87 @@
 .expense-form textarea {
     width: 100%;
     box-sizing: border-box;
-    padding: 11px 12px;
-    border: 1px solid #d5d5d5;
-    border-radius: 8px;
-    font-size: 14px;
-    background: #fff;
+    padding: 13px 15px;
+    border: 1px solid #dcdcdc;
+    border-radius: 9px;
+    font-size: 15px;
+    background: #ffffff;
+    color: #333333;
+    outline: none;
+    transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.expense-form input:focus,
+.expense-form select:focus,
+.expense-form textarea:focus {
+    border-color: #ff385c;
+    box-shadow: 0 0 0 3px rgba(255,56,92,0.10);
 }
 
 .expense-form textarea {
-    min-height: 75px;
+    min-height: 90px;
     resize: vertical;
 }
 
-.expense-form form > label {
-    align-self: end;
+/* SPLIT BETWEEN MEMBERS */
+
+.expense-form .split-label {
+    margin-top: 12px;
 }
 
-.expense-form form > input,
-.expense-form form > select,
-.expense-form form > textarea {
-    grid-column: 1 / -1;
+.expense-form .split-members {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 5px 0 12px;
 }
 
-.expense-form form > div {
+.expense-form .split-member {
     display: flex;
     align-items: center;
-    gap: 9px;
-    padding: 4px 0;
+    gap: 10px;
+    padding: 13px 15px;
+    margin: 0;
+    border: 1px solid #eeeeee;
+    border-radius: 9px;
+    background: #fafafa;
+    cursor: pointer;
+    transition: 0.2s ease;
 }
 
-.expense-form input[type="checkbox"] {
-    width: 17px;
-    height: 17px;
+.expense-form .split-member:hover {
+    border-color: #ff385c;
+    background: #fff5f6;
+}
+
+.expense-form .split-member input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
     accent-color: #ff385c;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
-.expense-form button {
-    grid-column: 1 / -1;
+/* FORM BUTTON */
+
+.expense-form button[type="submit"] {
+    width: 100%;
     background: #ff385c;
-    color: white;
+    color: #ffffff;
     border: none;
     border-radius: 9px;
-    padding: 13px;
-    font-size: 15px;
-    font-weight: 600;
+    padding: 15px;
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
+    transition: 0.2s ease;
 }
 
-.expense-form button:hover {
+.expense-form button[type="submit"]:hover {
     background: #e31c5f;
+    transform: translateY(-1px);
 }
 
 .expense-form button:disabled {
@@ -114,179 +222,10 @@
     margin-bottom: 0;
 }
 
-.settlement-section h3 {
-    margin: 20px 0 14px;
-}
-
-.settlement-balances {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-}
-
-.settlement-card {
-    border: 1px solid #e7e7e7;
-    border-radius: 12px;
-    padding: 18px;
-    margin-bottom: 12px;
-    background: #fafafa;
-}
-
-.settlement-card h4 {
-    margin: 0 0 12px;
-    font-size: 17px;
-}
-
-.settlement-card p {
-    color: #555;
-}
-
-.settlement-card strong {
-    font-size: 13px;
-}
-
-.expense-card {
-    margin-bottom: 14px;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.expense-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-}
-
-.expense-card h3 {
-    margin-top: 0;
-    text-transform: capitalize;
-}
-
-.expense-card p {
-    color: #555;
-    margin: 9px 0;
-}
-
-@media (max-width: 768px) {
-    .expense-container {
-        padding: 20px 14px;
-    }
-
-    .settlement-balances {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .expense-form form {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 450px) {
-    .settlement-balances {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-/* Split Between Members */
-.expense-form .split-label {
-    grid-column: 1 / -1;
-    margin-bottom: 0;
-}
-
-.expense-form .split-members {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px 24px;
-}
-
-.expense-form .split-member {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0;
-    cursor: pointer;
-}
-
-.expense-form .split-member input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    flex-shrink: 0;
-}
-
-@media (max-width: 600px) {
-    .expense-form .split-members {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-/* DASHBOARD SUMMARY CARDS */
-.expense-summary {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
-    margin: 25px 0;
-}
-
-@media (max-width: 1000px) {
-    .expense-summary {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 600px) {
-    .expense-summary {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* EXPENSE CARD IMPROVEMENTS */
-
-.expense-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.expense-card-header h3 {
-    margin: 0;
-    text-transform: capitalize;
-}
-
-.expense-category {
-    background: #fce8ec;
-    color: #d91b50;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    text-transform: capitalize;
-    font-weight: 600;
-}
-
-.expense-amount {
-    color: #222;
-    font-size: 26px;
-    margin: 18px 0;
-}
-
-.expense-date {
-    color: #888;
-    font-size: 13px;
-}
-
-
 /* SETTLEMENT DASHBOARD */
 
 .settlement-section {
-    background: #ffffff;
-    border: 1px solid #e5e5e5;
-    border-radius: 16px;
-    padding: 28px;
-    margin: 28px 0;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    margin: 30px 0;
 }
 
 .settlement-section > h2 {
@@ -296,91 +235,66 @@
 
 .settlement-section h3 {
     font-size: 19px;
-    margin: 24px 0 16px;
+    margin: 25px 0 16px;
 }
+
+/* SETTLEMENT SUMMARY */
+
+.settlement-section .expense-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.settlement-section .summary-card {
+    padding: 20px;
+}
+
+.settlement-section .summary-card h2 {
+    font-size: 22px;
+}
+
+/* MEMBER BALANCES */
 
 .settlement-balances {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
 }
 
 .settlement-balances .settlement-card {
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    border: 1px solid #e7e7e7;
     border-radius: 13px;
-    padding: 20px;
+    padding: 21px;
     margin: 0;
+    transition: transform 0.2s ease;
 }
 
-.settlement-balances .settlement-card h4 {
-    font-size: 16px;
-    margin-bottom: 12px;
+.settlement-balances .settlement-card:hover {
+    transform: translateY(-3px);
 }
 
-.settlement-balances .settlement-card p {
-    font-size: 20px;
-    font-weight: 700;
-    color: #222;
-    margin: 8px 0;
+.settlement-card h4 {
+    margin: 0 0 12px;
+    font-size: 17px;
+}
+
+.settlement-card p {
+    color: #555555;
+}
+
+.settlement-balances .settlement-card h3 {
+    font-size: 19px;
+    margin: 12px 0;
 }
 
 .settlement-balances .settlement-card strong {
     display: inline-block;
-    padding: 6px 11px;
+    padding: 7px 12px;
     border-radius: 20px;
     font-size: 12px;
 }
 
-/* Money to receive */
-.settlement-balances .settlement-card:has(strong:first-child) {
-    border-color: #e5e7eb;
-}
-
-/* Settlement transfer cards */
-.settlement-section > .settlement-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-left: 4px solid #ff385c;
-    border-radius: 12px;
-    padding: 18px 22px;
-}
-
-.settlement-section > .settlement-card p {
-    margin: 0;
-    font-size: 15px;
-}
-
-.settlement-section > .settlement-card h3 {
-    color: #d91b50;
-    margin: 0;
-    font-size: 22px;
-}
-
-@media (max-width: 900px) {
-    .settlement-balances {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 550px) {
-    .settlement-section {
-        padding: 18px;
-    }
-
-    .settlement-balances {
-        grid-template-columns: 1fr;
-    }
-
-    .settlement-section > .settlement-card {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-}
+/* BALANCE STATUS COLORS */
 
 .balance-positive {
     border-top: 4px solid #16a34a !important;
@@ -409,65 +323,154 @@
     color: #6b7280;
 }
 
-/* Payment confirmation button */
+/* WHO OWES WHOM */
+
+.settlement-section > .settlement-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: #ffffff;
+    border: 1px solid #eeeeee;
+    border-left: 4px solid #ff385c;
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 14px;
+}
+
+.settlement-section > .settlement-card p {
+    margin: 0;
+    font-size: 15px;
+}
+
+.settlement-section > .settlement-card h3 {
+    color: #ff385c;
+    margin: 0;
+    font-size: 22px;
+}
+
+/* MARK AS RECEIVED BUTTON */
+
 .settlement-card button {
-    background-color: #16a34a;
-    color: white;
+    background: #16a34a;
+    color: #ffffff;
     border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
+    padding: 11px 17px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
-    margin-top: 8px;
-    transition: background-color 0.2s ease;
+    transition: 0.2s ease;
 }
 
 .settlement-card button:hover {
-    background-color: #15803d;
+    background: #15803d;
 }
 
-/* Payment status */
-.settlement-card p strong {
-    font-weight: 700;
+/* ALL EXPENSES */
+
+.expense-container > h2 {
+    font-size: 25px;
+    margin: 32px 0 20px;
 }
 
-.settlement-card:has(button) {
-    border-left: 4px solid #f59e0b;
-}
-
-.settlement-card:not(:has(button)) {
-    border-left: 4px solid #16a34a;
-}
-.settlement-card:has(button) {
-    border-left: 4px solid #f59e0b !important;
-}
-
-.settlement-card:not(:has(button)) {
-    border-left: 4px solid #16a34a !important;
-}
-
-.expense-summary .summary-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 22px;
-    min-width: 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+.expense-card {
+    margin-bottom: 16px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.expense-summary .summary-card:hover {
+.expense-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 7px 20px rgba(0,0,0,0.07);
 }
 
-.expense-summary .summary-card h2 {
-    font-size: 25px;
+.expense-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.expense-card-header h3 {
+    margin: 0;
+    font-size: 19px;
+    text-transform: capitalize;
+}
+
+.expense-category {
+    background: #fff0f2;
+    color: #d91b50;
+    padding: 7px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    text-transform: capitalize;
+    font-weight: 600;
+}
+
+.expense-amount {
+    color: #222222;
+    font-size: 27px;
+    margin: 18px 0;
+}
+
+.expense-card p {
+    color: #555555;
     margin: 10px 0;
-    overflow-wrap: anywhere;
+    font-size: 14px;
 }
 
-.expense-summary .summary-card p {
-    color: #64748b;
-    margin-bottom: 0;
+.expense-date {
+    color: #888888 !important;
+    font-size: 13px !important;
+}
+
+/* RESPONSIVE DESIGN */
+
+@media (max-width: 1000px) {
+    .settlement-section .expense-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .settlement-balances {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .expense-container {
+        padding: 22px 15px;
+    }
+
+    .expense-container h1 {
+        font-size: 27px;
+    }
+
+    .expense-summary {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .settlement-section .expense-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .expense-form,
+    .settlement-section,
+    .expense-card {
+        padding: 19px;
+    }
+
+    .expense-form .split-members {
+        grid-template-columns: 1fr;
+    }
+
+    .settlement-balances {
+        grid-template-columns: 1fr;
+    }
+
+    .settlement-section > .settlement-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }
